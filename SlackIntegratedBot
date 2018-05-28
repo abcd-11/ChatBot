@@ -1,0 +1,74 @@
+from chatterbot import ChatBot
+from chatterbot.trainers import ListTrainer
+import speech_recognition as sr
+from slackclient import SlackClient
+import time
+
+#read_only will make sure that bot doesn't learn anything new on it's own
+bot = ChatBot('Bot',
+              logic_adapters=[
+        {
+            'import_path': 'chatterbot.logic.BestMatch'
+        },
+        {
+            'import_path': 'chatterbot.logic.LowConfidenceAdapter',
+            'threshold': 0.65,
+            'default_response': 'I am sorry, but I do not understand.'
+        }
+    ],
+    trainer='chatterbot.trainers.ListTrainer')
+
+slack_token = 'xoxb-370324149104-371159277509-ynJqEVnAaZ6UoqhT0G7ko1dP'
+sc = SlackClient(slack_token)
+
+while True:
+        r = sr.Recognizer()
+        with sr.Microphone() as source:
+            print("Say something!")
+            #will remove noise which comes when microphone is used
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source)
+
+        # Speech recognition using Google Speech Recognition
+        try:
+            # for testing purposes, we're just using the default API key
+            # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
+            # instead of `r.recognize_google(audio)`
+            message = r.recognize_google(audio)
+            print("You said: " + message)
+            
+            if message.lower() != 'bye':
+                reply = bot.get_response(message)
+                if message == reply or reply=='I am sorry, but I do not understand.':
+                     print('Kindly Contact Vidya/Monali for human assistance!!!')
+                     sc.api_call(
+                                "chat.postMessage",
+                                channel="#general",
+                                text="Hi Vidya/Monali!!! Please answer following question"
+                                )
+                     if sc.rtm_connect():
+                        while True:
+                                result = sc.rtm_read()
+                                if(len(result)):
+                                        set1 = result[0]
+                                        #print(set1)
+                                        if(len(set1) and set1["type"]=="message"):
+                                                #print("type is : " , type(set1))
+                                                response = set1["text"]         #response=<bytecode> message
+                                                response = response.split("> ")[1]
+                                                print("response is:",response)
+                                                bot.train([message,response,])
+                                                break
+                                #print("result is: " , result)
+                                time.sleep(1)
+                     else:
+                        print("unable to connect to slack chatbot")             
+                else:
+                     print('Chatbot:',reply)
+            if message.lower() =='bye':
+                print('Chatbot:Bye')
+                break
+        except sr.UnknownValueError:
+            print("Google Speech Recognition could not understand audio")
+        except sr.RequestError as e:
+            print("Could not request results from Google Speech Recognition service; {0}".format(e))
