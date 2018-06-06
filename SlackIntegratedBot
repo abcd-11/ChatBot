@@ -18,7 +18,7 @@ bot = ChatBot('Bot',
     ],
     trainer='chatterbot.trainers.ListTrainer')
 
-slack_token = 'xoxb-370324149104-371159277509-ynJqEVnAaZ6UoqhT0G7ko1dP'
+slack_token = your slack token
 sc = SlackClient(slack_token)
 
 while True:
